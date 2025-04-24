@@ -91,22 +91,28 @@
             <pre>Results will appear here...</pre>
         </div>
     </div>
+
     <script>
         async function fetchData() {
             const username = document.getElementById('username').value;
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '<pre>Loading...</pre>';
-            const apiUrl = `https://api.kaito.ai/api/v1/yaps?username=${username}`;
+
+            // Vercel API route
+            const vercelApiUrl = `/api/kaito?username=${username}`;
+
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetch(vercelApiUrl, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
                     }
                 });
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+
                 const data = await response.json();
                 resultsDiv.innerHTML = `<pre>${JSON.stringify(data, null, 4)}</pre>`;
             } catch (error) {
