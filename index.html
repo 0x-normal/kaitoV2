@@ -101,78 +101,88 @@
     </div>
 
     <script>
-        async function startResearch() {
-            const username = document.getElementById('username').value.trim();
-            const resultDiv = document.getElementById('result');
-            const content = resultDiv.querySelector('.result-content');
+    async function startResearch() {
+        const username = document.getElementById('username').value.trim();
+        const resultDiv = document.getElementById('result');
+        const content = resultDiv.querySelector('.result-content');
 
-            // Clear previous state
-            resultDiv.classList.remove('error', 'success');
-            resultDiv.querySelector('.error-badge')?.remove();
+        // Reset state
+        resultDiv.className = 'result-container';
+        content.innerHTML = '';
+        resultDiv.querySelector('.error-badge')?.remove();
 
-            if (!username) {
-                showError(resultDiv, content, 'Username is required');
-                return;
-            }
-
-            showLoading(content);
-
-            try {
-                const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
-                const data = await parseResponse(response);
-                
-                if (!response.ok || data.status !== 'success') {
-                    throw new Error(formatError(data));
-                }
-
-                showSuccess(resultDiv, content, data.data);
-            } catch (error) {
-                showError(resultDiv, content, error.message);
-                console.error('Research Error:', error);
-            }
+        if (!username) {
+            showError('Please enter a valid username');
+            return;
         }
 
-        async function parseResponse(response) {
-            const contentType = response.headers.get('content-type') || '';
+        showLoading();
+
+        try {
+            const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
+            const data = await parseResponse(response);
             
-            if (!contentType.includes('application/json')) {
-                const text = await response.text();
-                throw new Error(`Invalid response format: ${text.slice(0, 100)}`);
+            if (data.status === 'success') {
+                showResults(data.data);
+            } else {
+                throw new Error(formatError(data));
             }
-
-            return response.json();
+        } catch (error) {
+            showError(error.message);
+            console.error('Research Error:', error);
         }
+    }
 
-        function formatError(errorData) {
-            let message = errorData.message || 'Unknown error occurred';
-            if (errorData.code) message += ` (Code: ${errorData.code})`;
-            if (errorData.debug) {
-                message += `\nDebug Info: ${JSON.stringify(errorData.debug, null, 2)}`;
-            }
-            return message;
+    async function parseResponse(response) {
+        // Handle non-JSON responses
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Server returned unexpected format: ${contentType}\nPreview: ${text.substring(0, 100)}`);
         }
+        
+        return response.json();
+    }
 
-        function showLoading(content) {
-            content.textContent = 'Researching...';
-            content.classList.add('loading');
+    function formatError(errorData) {
+        let message = errorData.message || 'Unknown error occurred';
+        if (errorData.code) message += ` (${errorData.code})`;
+        if (errorData.debug?.sampleData) {
+            message += `\nServer response: ${errorData.debug.sampleData}`;
         }
+        return message;
+    }
 
-        function showSuccess(container, content, data) {
-            content.classList.remove('loading');
-            container.classList.add('success');
+    function showLoading() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.className = 'result-container loading';
+        resultDiv.querySelector('.result-content').textContent = 'Analyzing buzzcalls...';
+    }
+
+    function showResults(data) {
+        const resultDiv = document.getElementById('result');
+        const content = resultDiv.querySelector('.result-content');
+        resultDiv.className = 'result-container success';
+        
+        try {
             content.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+            content.textContent = `Data format error: ${error.message}`;
         }
+    }
 
-        function showError(container, content, message) {
-            content.classList.remove('loading');
-            container.classList.add('error');
-            content.textContent = message;
-            
-            const badge = document.createElement('div');
-            badge.className = 'error-badge';
-            badge.textContent = 'Error';
-            container.appendChild(badge);
-        }
-    </script>
+    function showError(message) {
+        const resultDiv = document.getElementById('result');
+        const content = resultDiv.querySelector('.result-content');
+        resultDiv.className = 'result-container error';
+        
+        const badge = document.createElement('div');
+        badge.className = 'error-badge';
+        badge.textContent = 'ERROR';
+        resultDiv.appendChild(badge);
+        
+        content.textContent = message;
+    }
+</script>
 </body>
 </html>
