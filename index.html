@@ -93,96 +93,62 @@
     </div>
 
     <script>
-        async function fetchData() {
-            const username = document.getElementById('username').value;
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<pre>Loading...</pre>';
-
-            // Vercel API route
-            const vercelApiUrl = `/api/kaito?username=${username}`;
-
-            try {
-                const response = await fetch(vercelApiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`);
-                }
-
-                const data = await response.json();
-                resultsDiv.innerHTML = `<pre>${JSON.stringify(data, null, 4)}</pre>`;
-            } catch (error) {
-                resultsDiv.innerHTML = `<pre>Error: ${error.message}</pre>`;
-            }
-        }
-    </script>
-</body>
-    <script>
     async function fetchData() {
         const username = document.getElementById('username').value.trim();
         const resultsDiv = document.getElementById('results');
         
         if (!username) {
-            resultsDiv.innerHTML = '<pre class="error">Error: Please enter a username</pre>';
+            showError('Please enter a username');
             return;
         }
 
-        resultsDiv.innerHTML = '<pre class="loading">Loading research data...</pre>';
+        showLoading();
 
         try {
             const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(formatError(result));
+            const textResponse = await response.text();
+            
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                throw new Error(`Invalid server response: ${textResponse.substring(0, 100)}...`);
             }
 
-            displayResults(result.data);
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Request failed');
+            }
+
+            showResults(data.data);
             
         } catch (error) {
-            resultsDiv.innerHTML = `<pre class="error">${error.message}</pre>`;
-            console.error('Research Error:', error);
+            showError(error.message);
+            console.error('Error:', error);
         }
     }
 
-    function formatError(errorResponse) {
-        if (!errorResponse) return 'Unknown API Error';
-        
-        let message = errorResponse.error || 'API Error';
-        const details = errorResponse.details;
-        
-        if (details) {
-            if (typeof details === 'object') {
-                message += `\n${JSON.stringify(details, null, 2)}`;
-            } else {
-                message += `\nDetails: ${details}`;
-            }
-        }
-        
-        return message;
+    function showLoading() {
+        document.getElementById('results').innerHTML = 
+            '<pre class="loading">🔍 Researching buzzcards...</pre>';
     }
 
-    function displayResults(data) {
-        const resultsDiv = document.getElementById('results');
-        
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-            resultsDiv.innerHTML = '<pre class="no-results">No research data found for this username</pre>';
-            return;
-        }
-        
-        resultsDiv.innerHTML = `<pre class="success">${JSON.stringify(data, null, 4)}</pre>`;
+    function showError(message) {
+        document.getElementById('results').innerHTML = 
+            `<pre class="error">❌ Error: ${message}</pre>`;
+    }
+
+    function showResults(data) {
+        const formatted = data ? JSON.stringify(data, null, 2) : 'No results found';
+        document.getElementById('results').innerHTML = 
+            `<pre class="success">${formatted}</pre>`;
     }
 </script>
 
 <style>
-    .error { color: #ff6b6b; }
+    .error { color: #ff6b6b; white-space: pre-wrap; }
     .loading { color: #64ffda; }
-    .success { color: #f8f9fa; }
-    .no-results { color: #adb5bd; }
+    .success { color: #f0f0f0; background: #1e1e1e; padding: 1em; border-radius: 4px; }
 </style>
+</body>
+    
 </html>
