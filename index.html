@@ -96,7 +96,7 @@
 <body>
   <div class="container">
     <h1>🔍 Kaito Yaps Explorer</h1>
-    <input id="username" type="text" placeholder="Enter username (e.g., 0x_ultra)" />
+    <input id="username" type="text" placeholder="Enter username (e.g., VitalikButerin)" />
     <br>
     <button onclick="fetchData()">Search</button>
 
@@ -120,7 +120,6 @@
 
         const fields = {
           "User ID": data.user_id,
-          "Username": data.username,
           "Yaps (All Time)": data.yaps_all,
           "Last 24h": data.yaps_l24h,
           "Last 48h": data.yaps_l48h,
