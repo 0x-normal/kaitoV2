@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
@@ -19,12 +19,14 @@ module.exports = async (req, res) => {
     const { username } = req.query;
     
     // Validate username parameter
-    if (!username) {
-        return res.status(400).json({ error: 'Username parameter is required' });
+    if (!username || username.trim() === '') {
+        return res.status(400).json({ 
+            error: 'Username parameter is required',
+            details: 'Please provide a valid username in the query parameters'
+        });
     }
 
-    const apiUrl = `https://api.kaito.ai/api/v1/yaps?username=${encodeURIComponent(username)}`;
-    console.log('Making request to Kaito API with URL:', apiUrl);
+    const apiUrl = `https://api.kaito.ai/api/v1/yaps?username=${encodeURIComponent(username.trim())}`;
 
     try {
         const response = await axios.get(apiUrl, {
@@ -35,42 +37,33 @@ module.exports = async (req, res) => {
             timeout: 10000 // 10 seconds timeout
         });
 
-        console.log('Received response from Kaito API. Status:', response.status);
-        
-        if (response.status !== 200) {
-            console.error('Kaito API returned non-200 status:', response.status, response.data);
-            return res.status(502).json({ 
-                error: `Kaito API returned status: ${response.status}`,
-                details: response.data 
-            });
+        // Ensure the response is valid JSON
+        if (typeof response.data !== 'object') {
+            throw new Error('Invalid response format from Kaito API');
         }
 
         return res.status(200).json(response.data);
     } catch (error) {
-        console.error('Error fetching data from Kaito API:', error);
+        // Prepare error response
+        let errorResponse = {
+            error: 'Failed to fetch data from Kaito API',
+            details: null
+        };
 
-        let errorMessage = 'Failed to fetch data from Kaito API';
-        let statusCode = 500;
-        
         if (error.response) {
             // Server responded with error status
-            errorMessage = `Kaito API Error: ${error.response.status}`;
-            statusCode = error.response.status === 404 ? 404 : 502;
-            if (error.response.data) {
-                errorMessage += ` - ${JSON.stringify(error.response.data)}`;
-            }
+            errorResponse.error = `Kaito API Error: ${error.response.status}`;
+            errorResponse.details = error.response.data || 'No additional details';
         } else if (error.request) {
             // No response received
-            errorMessage = 'No response received from Kaito API (timeout or network error)';
-            statusCode = 504;
+            errorResponse.error = 'Network Error';
+            errorResponse.details = 'No response received from Kaito API';
         } else {
             // Request setup error
-            errorMessage = error.message;
+            errorResponse.error = 'Request Error';
+            errorResponse.details = error.message;
         }
 
-        return res.status(statusCode).json({ 
-            error: errorMessage,
-            details: error.config ? { url: error.config.url } : null
-        });
+        return res.status(error.response?.status || 500).json(errorResponse);
     }
 };
