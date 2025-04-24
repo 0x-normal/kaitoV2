@@ -91,63 +91,104 @@
             <pre>Results will appear here...</pre>
         </div>
     </div>
-
-    <script>
+<script>
     async function fetchData() {
         const username = document.getElementById('username').value.trim();
         const resultsDiv = document.getElementById('results');
         
+        // Clear previous results
+        resultsDiv.innerHTML = '';
+        
+        // Validate input
         if (!username) {
-            showError('Please enter a username');
+            showMessage('Please enter a username', 'error');
             return;
         }
 
-        showLoading();
+        showMessage('Researching buzzcards...', 'loading');
 
         try {
             const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
-            const textResponse = await response.text();
+            const contentType = response.headers.get('content-type');
             
-            let data;
-            try {
-                data = JSON.parse(textResponse);
-            } catch (e) {
-                throw new Error(`Invalid server response: ${textResponse.substring(0, 100)}...`);
+            // Handle non-JSON responses
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Unexpected response: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
             }
 
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Request failed');
+            const data = await response.json();
+            
+            if (!response.ok || data.status !== 'success') {
+                throw new Error(formatApiError(data));
             }
 
-            showResults(data.data);
+            displayResults(data.data);
             
         } catch (error) {
-            showError(error.message);
-            console.error('Error:', error);
+            showMessage(error.message, 'error');
+            console.error('Research Error:', error);
         }
     }
 
-    function showLoading() {
-        document.getElementById('results').innerHTML = 
-            '<pre class="loading">🔍 Researching buzzcards...</pre>';
+    function formatApiError(errorData) {
+        let message = errorData.message || 'API Error';
+        if (errorData.details) {
+            if (typeof errorData.details === 'object') {
+                message += `\n${JSON.stringify(errorData.details, null, 2)}`;
+            } else {
+                message += `\nDetails: ${errorData.details}`;
+            }
+        }
+        return message;
     }
 
-    function showError(message) {
-        document.getElementById('results').innerHTML = 
-            `<pre class="error">❌ Error: ${message}</pre>`;
+    function showMessage(text, type) {
+        const pre = document.createElement('pre');
+        pre.className = type;
+        pre.textContent = text;
+        document.getElementById('results').appendChild(pre);
     }
 
-    function showResults(data) {
-        const formatted = data ? JSON.stringify(data, null, 2) : 'No results found';
-        document.getElementById('results').innerHTML = 
-            `<pre class="success">${formatted}</pre>`;
+    function displayResults(data) {
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            showMessage('No research data found', 'info');
+            return;
+        }
+        
+        try {
+            const formatted = JSON.stringify(data, null, 2);
+            showMessage(formatted, 'success');
+        } catch (e) {
+            showMessage(`Results (formatting error): ${e.message}`, 'error');
+            console.log('Raw data:', data);
+        }
     }
 </script>
 
 <style>
-    .error { color: #ff6b6b; white-space: pre-wrap; }
-    .loading { color: #64ffda; }
-    .success { color: #f0f0f0; background: #1e1e1e; padding: 1em; border-radius: 4px; }
+    pre {
+        padding: 12px;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        margin: 8px 0;
+    }
+    .error {
+        color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+        border-left: 3px solid #ff6b6b;
+    }
+    .loading {
+        color: #64ffda;
+        border-left: 3px solid #64ffda;
+    }
+    .success {
+        color: #f0f0f0;
+        background: rgba(30, 30, 30, 0.8);
+    }
+    .info {
+        color: #adb5bd;
+    }
 </style>
 </body>
     
