@@ -128,40 +128,61 @@
         const resultsDiv = document.getElementById('results');
         
         if (!username) {
-            resultsDiv.innerHTML = '<pre>Error: Please enter a username</pre>';
+            resultsDiv.innerHTML = '<pre class="error">Error: Please enter a username</pre>';
             return;
         }
 
-        resultsDiv.innerHTML = '<pre>Loading...</pre>';
+        resultsDiv.innerHTML = '<pre class="loading">Loading research data...</pre>';
 
         try {
-            const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
+            const result = await response.json();
 
-            const data = await response.json();
-            
-            if (!response.ok) {
-                // Handle API errors
-                let errorMessage = data.error || 'Unknown error occurred';
-                if (data.details) {
-                    errorMessage += `\nDetails: ${typeof data.details === 'object' 
-                        ? JSON.stringify(data.details, null, 2) 
-                        : data.details}`;
-                }
-                throw new Error(errorMessage);
+            if (!response.ok || !result.success) {
+                throw new Error(formatError(result));
             }
 
-            // Display formatted results
-            resultsDiv.innerHTML = `<pre>${JSON.stringify(data, null, 4)}</pre>`;
+            displayResults(result.data);
+            
         } catch (error) {
-            // Display readable error message
-            resultsDiv.innerHTML = `<pre>Error: ${error.message.replace('[object Object]', 'Unknown error')}</pre>`;
-            console.error('Fetch error:', error);
+            resultsDiv.innerHTML = `<pre class="error">${error.message}</pre>`;
+            console.error('Research Error:', error);
         }
     }
+
+    function formatError(errorResponse) {
+        if (!errorResponse) return 'Unknown API Error';
+        
+        let message = errorResponse.error || 'API Error';
+        const details = errorResponse.details;
+        
+        if (details) {
+            if (typeof details === 'object') {
+                message += `\n${JSON.stringify(details, null, 2)}`;
+            } else {
+                message += `\nDetails: ${details}`;
+            }
+        }
+        
+        return message;
+    }
+
+    function displayResults(data) {
+        const resultsDiv = document.getElementById('results');
+        
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            resultsDiv.innerHTML = '<pre class="no-results">No research data found for this username</pre>';
+            return;
+        }
+        
+        resultsDiv.innerHTML = `<pre class="success">${JSON.stringify(data, null, 4)}</pre>`;
+    }
 </script>
+
+<style>
+    .error { color: #ff6b6b; }
+    .loading { color: #64ffda; }
+    .success { color: #f8f9fa; }
+    .no-results { color: #adb5bd; }
+</style>
 </html>
