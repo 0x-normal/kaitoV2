@@ -18,11 +18,15 @@ module.exports = async (req, res) => {
 
         res.status(200).json(response.data);
     } catch (error) {
-        console.error('Error fetching data from Kaito API:', error.message);
-        if (error.response) {
-            console.error('Kaito API error data:', error.response.data);
-            return res.status(500).json({ error: `Kaito API error: ${error.message}, ${JSON.stringify(error.response.data)}` });
+        console.error('Error fetching data from Kaito API:', error);
+
+        let errorMessage = 'Failed to fetch data from Kaito API';
+        if (error.response && error.response.data) {
+            errorMessage = JSON.stringify(error.response.data); // Stringify the error data
+        } else if (error.message) {
+            errorMessage = error.message;
         }
-        res.status(500).json({ error: 'Failed to fetch data from Kaito API' });
+
+        res.status(500).json({ error: errorMessage });
     }
 };
