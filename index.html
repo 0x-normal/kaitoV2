@@ -2,67 +2,145 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Kaito Explorer</title>
+  <title>Kaito Yaps Stats</title>
   <style>
     body {
-      background: #0d0d0d;
-      font-family: 'Segoe UI', sans-serif;
-      color: #eee;
-      text-align: center;
+      font-family: 'Arial', sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: #1e1e1e;
       padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+      width: 80%;
+      max-width: 800px;
+      text-align: center;
     }
 
-    input, button {
-      padding: 10px 15px;
-      font-size: 16px;
-      margin: 10px;
-      border-radius: 6px;
+    h1 {
+      color: #64ffda;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      padding: 12px;
+      margin: 10px 0;
       border: none;
+      border-radius: 6px;
+      background-color: #333;
+      color: #fff;
+      width: 70%;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
     }
 
-    input {
-      width: 250px;
+    input[type="text"]:focus {
+      background-color: #444;
+      outline: none;
     }
 
     button {
-      background-color: #00f0ff;
-      color: black;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      background-color: #64ffda;
+      color: #121212;
       cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
     }
 
-    .result {
+    button:hover {
+      background-color: #42c8b3;
+    }
+
+    #results {
       margin-top: 30px;
-      background-color: #1a1a1a;
+      text-align: left;
+      background-color: #282828;
       padding: 20px;
       border-radius: 8px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-      box-shadow: 0 0 10px #00f0ff33;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .card {
+      background-color: #1e1e1e;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+      border-left: 4px solid #64ffda;
+      border-radius: 6px;
+    }
+
+    .card h3 {
+      margin: 0;
+      color: #64ffda;
+      font-size: 16px;
+    }
+
+    .card p {
+      margin: 5px 0 0;
+      color: #ccc;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>🔍 Kaito Explorer</h1>
-  <input id="username" placeholder="Enter username (e.g., VitalikButerin)" />
-  <button onclick="fetchData()">Search</button>
+  <div class="container">
+    <h1>🔍 Kaito Yaps Explorer</h1>
+    <input id="username" type="text" placeholder="Enter username (e.g., 0x_ultra)" />
+    <br>
+    <button onclick="fetchData()">Search</button>
 
-  <div class="result" id="output"></div>
+    <div id="results"></div>
+  </div>
 
   <script>
     async function fetchData() {
       const user = document.getElementById("username").value.trim();
-      const output = document.getElementById("output");
-      output.innerHTML = "Loading...";
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "Loading...";
 
       try {
         const res = await fetch(`/api/yaps?username=${user}`);
         const data = await res.json();
-        output.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<div class="card"><p>${data.error}</p></div>`;
+          return;
+        }
+
+        const fields = {
+          "User ID": data.user_id,
+          "Username": data.username,
+          "Yaps (All Time)": data.yaps_all,
+          "Last 24h": data.yaps_l24h,
+          "Last 48h": data.yaps_l48h,
+          "Last 7d": data.yaps_l7d,
+          "Last 30d": data.yaps_l30d,
+          "Last 3 Months": data.yaps_l3m,
+          "Last 6 Months": data.yaps_l6m,
+          "Last 12 Months": data.yaps_l12m
+        };
+
+        resultsDiv.innerHTML = Object.entries(fields).map(([key, value]) => `
+          <div class="card">
+            <h3>${key}</h3>
+            <p>${parseFloat(value).toFixed(2)}</p>
+          </div>
+        `).join("");
+
       } catch (err) {
         console.error(err);
-        output.innerHTML = "Error fetching data.";
+        resultsDiv.innerHTML = "<div class='card'><p>Failed to fetch data. Please try again.</p></div>";
       }
     }
   </script>
