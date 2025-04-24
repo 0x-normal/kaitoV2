@@ -122,4 +122,46 @@
         }
     </script>
 </body>
+    <script>
+    async function fetchData() {
+        const username = document.getElementById('username').value.trim();
+        const resultsDiv = document.getElementById('results');
+        
+        if (!username) {
+            resultsDiv.innerHTML = '<pre>Error: Please enter a username</pre>';
+            return;
+        }
+
+        resultsDiv.innerHTML = '<pre>Loading...</pre>';
+
+        try {
+            const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                // Handle API errors
+                let errorMessage = data.error || 'Unknown error occurred';
+                if (data.details) {
+                    errorMessage += `\nDetails: ${typeof data.details === 'object' 
+                        ? JSON.stringify(data.details, null, 2) 
+                        : data.details}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            // Display formatted results
+            resultsDiv.innerHTML = `<pre>${JSON.stringify(data, null, 4)}</pre>`;
+        } catch (error) {
+            // Display readable error message
+            resultsDiv.innerHTML = `<pre>Error: ${error.message.replace('[object Object]', 'Unknown error')}</pre>`;
+            console.error('Fetch error:', error);
+        }
+    }
+</script>
 </html>
