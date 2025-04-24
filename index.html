@@ -5,191 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kaito AI Research</title>
     <style>
+        :root {
+            --color-primary: #64ffda;
+            --color-error: #ff6b6b;
+            --color-success: #90ee90;
+            --color-text: #e0e0e0;
+            --color-bg: #1a1a1a;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #121212;
-            color: #fff;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            margin: 2rem;
+            line-height: 1.6;
         }
 
         .container {
-            background-color: #1e1e1e;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
-            width: 80%;
             max-width: 800px;
-            text-align: center;
+            margin: 0 auto;
         }
 
-        h1 {
-            color: #64ffda;
-            margin-bottom: 20px;
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
         }
 
-        input[type="text"] {
-            padding: 12px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 6px;
-            background-color: #333;
-            color: #fff;
-            width: 70%;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-
-        input[type="text"]:focus {
-            background-color: #444;
-            outline: none;
+        input {
+            flex: 1;
+            padding: 0.8rem;
+            background: #333;
+            border: 1px solid #444;
+            color: inherit;
+            border-radius: 4px;
+            font-size: 1rem;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 0.8rem 1.5rem;
+            background: var(--color-primary);
             border: none;
-            border-radius: 6px;
-            background-color: #64ffda;
-            color: #121212;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
+            font-weight: bold;
+            color: #121212;
+            transition: opacity 0.2s;
         }
 
         button:hover {
-            background-color: #42c8b3;
+            opacity: 0.9;
         }
 
-        #results {
-            margin-top: 30px;
-            text-align: left;
-            background-color: #282828;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-            overflow-x: auto;
+        .result-container {
+            background: #252525;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .result-content {
             white-space: pre-wrap;
+            font-family: 'Consolas', monospace;
+            overflow-x: auto;
         }
 
-        #results pre {
-            color: #f0f0f0;
-            font-size: 14px;
-            line-height: 1.6;
+        .error-badge {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: var(--color-error);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            color: var(--color-primary);
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Kaito AI Research</h1>
-        <input type="text" id="username" placeholder="Enter Username">
-        <button onclick="fetchData()">Research</button>
-        <div id="results">
-            <pre>Results will appear here...</pre>
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Enter username...">
+            <button onclick="startResearch()">Research</button>
+        </div>
+        <div id="result" class="result-container">
+            <div class="result-content">Results will appear here...</div>
         </div>
     </div>
-<script>
-    async function fetchData() {
-        const username = document.getElementById('username').value.trim();
-        const resultsDiv = document.getElementById('results');
-        
-        // Clear previous results
-        resultsDiv.innerHTML = '';
-        
-        // Validate input
-        if (!username) {
-            showMessage('Please enter a username', 'error');
-            return;
+
+    <script>
+        async function startResearch() {
+            const username = document.getElementById('username').value.trim();
+            const resultDiv = document.getElementById('result');
+            const content = resultDiv.querySelector('.result-content');
+
+            // Clear previous state
+            resultDiv.classList.remove('error', 'success');
+            resultDiv.querySelector('.error-badge')?.remove();
+
+            if (!username) {
+                showError(resultDiv, content, 'Username is required');
+                return;
+            }
+
+            showLoading(content);
+
+            try {
+                const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
+                const data = await parseResponse(response);
+                
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(formatError(data));
+                }
+
+                showSuccess(resultDiv, content, data.data);
+            } catch (error) {
+                showError(resultDiv, content, error.message);
+                console.error('Research Error:', error);
+            }
         }
 
-        showMessage('Researching buzzcards...', 'loading');
-
-        try {
-            const response = await fetch(`/api/kaito?username=${encodeURIComponent(username)}`);
-            const contentType = response.headers.get('content-type');
+        async function parseResponse(response) {
+            const contentType = response.headers.get('content-type') || '';
             
-            // Handle non-JSON responses
-            if (!contentType || !contentType.includes('application/json')) {
+            if (!contentType.includes('application/json')) {
                 const text = await response.text();
-                throw new Error(`Unexpected response: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
+                throw new Error(`Invalid response format: ${text.slice(0, 100)}`);
             }
 
-            const data = await response.json();
+            return response.json();
+        }
+
+        function formatError(errorData) {
+            let message = errorData.message || 'Unknown error occurred';
+            if (errorData.code) message += ` (Code: ${errorData.code})`;
+            if (errorData.debug) {
+                message += `\nDebug Info: ${JSON.stringify(errorData.debug, null, 2)}`;
+            }
+            return message;
+        }
+
+        function showLoading(content) {
+            content.textContent = 'Researching...';
+            content.classList.add('loading');
+        }
+
+        function showSuccess(container, content, data) {
+            content.classList.remove('loading');
+            container.classList.add('success');
+            content.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function showError(container, content, message) {
+            content.classList.remove('loading');
+            container.classList.add('error');
+            content.textContent = message;
             
-            if (!response.ok || data.status !== 'success') {
-                throw new Error(formatApiError(data));
-            }
-
-            displayResults(data.data);
-            
-        } catch (error) {
-            showMessage(error.message, 'error');
-            console.error('Research Error:', error);
+            const badge = document.createElement('div');
+            badge.className = 'error-badge';
+            badge.textContent = 'Error';
+            container.appendChild(badge);
         }
-    }
-
-    function formatApiError(errorData) {
-        let message = errorData.message || 'API Error';
-        if (errorData.details) {
-            if (typeof errorData.details === 'object') {
-                message += `\n${JSON.stringify(errorData.details, null, 2)}`;
-            } else {
-                message += `\nDetails: ${errorData.details}`;
-            }
-        }
-        return message;
-    }
-
-    function showMessage(text, type) {
-        const pre = document.createElement('pre');
-        pre.className = type;
-        pre.textContent = text;
-        document.getElementById('results').appendChild(pre);
-    }
-
-    function displayResults(data) {
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-            showMessage('No research data found', 'info');
-            return;
-        }
-        
-        try {
-            const formatted = JSON.stringify(data, null, 2);
-            showMessage(formatted, 'success');
-        } catch (e) {
-            showMessage(`Results (formatting error): ${e.message}`, 'error');
-            console.log('Raw data:', data);
-        }
-    }
-</script>
-
-<style>
-    pre {
-        padding: 12px;
-        border-radius: 6px;
-        white-space: pre-wrap;
-        margin: 8px 0;
-    }
-    .error {
-        color: #ff6b6b;
-        background: rgba(255, 107, 107, 0.1);
-        border-left: 3px solid #ff6b6b;
-    }
-    .loading {
-        color: #64ffda;
-        border-left: 3px solid #64ffda;
-    }
-    .success {
-        color: #f0f0f0;
-        background: rgba(30, 30, 30, 0.8);
-    }
-    .info {
-        color: #adb5bd;
-    }
-</style>
+    </script>
 </body>
-    
 </html>
