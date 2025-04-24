@@ -1,97 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>vApps Explorer</title>
+  <meta charset="UTF-8" />
+  <title>Kaito Explorer</title>
   <style>
     body {
+      background: #0d0d0d;
       font-family: 'Segoe UI', sans-serif;
-      background: #0f0f0f;
-      color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 50px;
+      color: #eee;
+      text-align: center;
+      padding: 40px;
     }
 
-    h1 {
-      color: #00f0ff;
-      margin-bottom: 20px;
+    input, button {
+      padding: 10px 15px;
+      font-size: 16px;
+      margin: 10px;
+      border-radius: 6px;
+      border: none;
     }
 
     input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
       width: 250px;
-      margin-right: 10px;
     }
 
     button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background: #00f0ff;
-      color: #000;
+      background-color: #00f0ff;
+      color: black;
       cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      background: #00c2d1;
     }
 
     .result {
       margin-top: 30px;
-      background: #1a1a1a;
+      background-color: #1a1a1a;
       padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
+      border-radius: 8px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
       box-shadow: 0 0 10px #00f0ff33;
-    }
-
-    .result pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
     }
   </style>
 </head>
 <body>
-  <h1>🔍 vApps Stats Explorer</h1>
-  <div>
-    <input type="text" id="username" placeholder="Enter username (e.g., VitalikButerin)" />
-    <button onclick="fetchData()">Search</button>
-  </div>
+  <h1>🔍 Kaito Explorer</h1>
+  <input id="username" placeholder="Enter username (e.g., VitalikButerin)" />
+  <button onclick="fetchData()">Search</button>
+
   <div class="result" id="output"></div>
 
   <script>
     async function fetchData() {
       const user = document.getElementById("username").value.trim();
       const output = document.getElementById("output");
-      if (!user) {
-        output.innerHTML = "<p>Please enter a username!</p>";
-        return;
-      }
+      output.innerHTML = "Loading...";
 
-      output.innerHTML = "<p>Loading...</p>";
       try {
-        const res = await fetch(`https://api.kaito.ai/api/v1/yaps?username=${user}`);
+        const res = await fetch(`/api/yaps?username=${user}`);
         const data = await res.json();
-
-        if (data.username) {
-          output.innerHTML = `
-            <h3>User: ${data.username}</h3>
-            <pre>${JSON.stringify(data, null, 2)}</pre>
-          `;
-        } else {
-          output.innerHTML = "<p>User not found or invalid response.</p>";
-        }
+        output.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
       } catch (err) {
         console.error(err);
-        output.innerHTML = "<p>Error fetching data. Check console for details.</p>";
+        output.innerHTML = "Error fetching data.";
       }
     }
   </script>
